@@ -1,0 +1,25 @@
+.header {
+  background: #fff;
+  padding: 0 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  height: 48px;
+  width: 48px;
+}
+
+.site-title {
+  margin: 0;
+  font-size: 18px;
+  color: #1890ff;
+}
+
+.ant-menu-horizontal {
+  border-bottom: none !important;
+}
