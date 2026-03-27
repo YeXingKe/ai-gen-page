@@ -23,16 +23,20 @@ This is an **AI‑powered page generation platform** that lets users describe an
 ### Key Technologies
 
 - **Frontend:** React 19, React Router DOM, Zustand (state management), Ant Design (UI library) with Chinese locale (zh_CN), Axios (HTTP client)
+- **Markdown Rendering:** markdown-it with highlight.js for syntax highlighting in chat interfaces
+- **Utilities:** clsx (conditional classes), dayjs (date/time handling)
 - **Build Tool:** Vite 8 (beta) with React plugin and React Compiler enabled – note that this is a beta version; check Vite release notes for potential breaking changes.
 - **Language:** TypeScript with strict settings and path alias `@/*` → `./src/*`
 - **Code Quality:** ESLint (TypeScript‑aware), Prettier (semi‑false, single‑quote, print‑width 100)
 - **Backend Integration:** OpenAPI‑generated TypeScript types and API clients (via `@umijs/openapi`)
+- **Package Manager:** pnpm (required; version 10.14.0+)
 
 ### Architecture Highlights
 
 #### API Layer
 - All backend types are generated into `src/api/typings.d.ts` (namespace `API.*`)
 - API client functions are generated into `src/api/*Controller.ts` by the `openapi2ts` command
+  - Available controllers: `appController`, `chatHistoryController`, `healthController`, `staticResourceController`, `userController`
 - Request instance (`src/request.ts`) configures Axios with:
   - Base URL from `VITE_API_BASE_URL` (default `http://localhost:8123/api`)
   - Global request/response interceptors for error handling and login‑state detection
@@ -44,7 +48,13 @@ This is an **AI‑powered page generation platform** that lets users describe an
 - **Permission hook:** `src/access.tsx` – `useAccess()` validates admin routes and redirects to login
 
 #### Routing & Layout
-- Router defined in `src/router/index.tsx` (currently only home route; admin/user/app routes commented out)
+- Router defined in `src/router/index.tsx` with the following active routes:
+  - `/` – HomePage
+  - `/user/login` – UserLoginPage
+  - `/user/register` – UserRegisterPage
+  - `/admin/userManage` – UserManagePage
+  - `/app/chat/:id` – AppChatPage (AI chat interface for app generation)
+- Additional routes (commented out): `/admin/appManage`, `/admin/chatManage`, `/app/edit/:id`
 - `src/layouts/BasicLayout.tsx` provides a common frame with `GlobalHeader` and `GlobalFooter`
 - Route‑level permission checks are performed by the layout via `useAccess()`
 
@@ -63,6 +73,12 @@ This is an **AI‑powered page generation platform** that lets users describe an
   - `STATIC_BASE_URL` – derived static‑resource URL
   - Helper functions `getDeployUrl()` and `getStaticPreviewUrl()`
 
+#### App Generation Workflow
+- The platform uses a chat-based interface (`AppChatPage`) where users describe applications in natural language
+- AI responses are rendered with markdown-it and syntax-highlighted with highlight.js
+- Generated applications can be edited via `AppEditPage` with visual editor support
+- Static resources and deployments are managed through `staticResourceController`
+
 ### File Organization
 
 ```
@@ -72,7 +88,7 @@ src/
 ├── components/            # Reusable UI (AppCard, GlobalHeader, GlobalFooter)
 ├── config/                # Environment & configuration
 ├── layouts/               # Page layout (BasicLayout)
-├── pages/                 # Route‑level pages (HomePage)
+├── pages/                 # Route‑level pages (HomePage, UserLoginPage, AppChatPage, AppEditPage, AppManagePage, UserManagePage)
 ├── stores/                # Zustand stores (loginUser)
 ├── utils/                 # Utilities (visualEditor, codeGenTypes, time)
 ├── access.tsx             # Permission hooks
@@ -90,6 +106,7 @@ src/
 4. **Styling:** Ant Design components are the primary UI building blocks. Custom styles are placed in `.module.css` files co‑located with components.
 5. **Environment Variables:** Prefix with `VITE_` to be exposed to the frontend. Access via `import.meta.env`.
 6. **OpenAPI Updates:** After backend API changes, run `pnpm openapi2ts` to regenerate types and clients.
+7. **Markdown Rendering:** For AI-generated content or chat interfaces, use `markdown-it` with `highlight.js` for syntax-highlighted code blocks.
 
 ### Running Tests
 

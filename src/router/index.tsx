@@ -4,9 +4,9 @@ import HomePage from '@/pages/HomePage'
 import UserLoginPage from '@/pages/UserLoginPage'
 import UserRegisterPage from '@/pages/UserRegisterPage'
 import UserManagePage from '@/pages/UserManagePage'
-// import AppManagePage from '@/pages/admin/AppManagePage'
-// import AppChatPage from '@/pages/app/AppChatPage'
-// import AppEditPage from '@/pages/app/AppEditPage'
+import AppManagePage from '@/pages/AppManagePage'
+import AppChatPage from '@/pages/AppChatPage'
+import AppEditPage from '@/pages/AppEditPage'
 // import ChatManagePage from '@/pages/admin/ChatManagePage'
 
 const router = createBrowserRouter([
@@ -30,22 +30,22 @@ const router = createBrowserRouter([
         path: '/admin/userManage',
         element: <UserManagePage />,
       },
-      // {
-      //   path: '/admin/appManage',
-      //   element: <AppManagePage />,
-      // },
+      {
+        path: '/admin/appManage',
+        element: <AppManagePage />,
+      },
       // {
       //   path: '/admin/chatManage',
       //   element: <ChatManagePage />,
       // },
-      // {
-      //   path: '/app/chat/:id',
-      //   element: <AppChatPage />,
-      // },
-      // {
-      //   path: '/app/edit/:id',
-      //   element: <AppEditPage />,
-      // },
+      {
+        path: '/app/chat/:id',
+        element: <AppChatPage />,
+      },
+      {
+        path: '/app/edit/:id',
+        element: <AppEditPage />,
+      },
     ],
   },
 ])
