@@ -4,3 +4,10 @@ export default {
   schemaPath: 'http://localhost:8123/api/v3/api-docs',
   serversPath: './src',
 }
+
+// 工具内部执行
+// const response = await fetch('http://localhost:8123/api/v3/api-docs')
+// const openAPISchema = await response.json()
+// 解析接口定义从OPENAPI Schma中提取
+// typings.d.ts - 根据后端的 Schema 自动生成
+// 根据接口定义自动生成

@@ -53,8 +53,10 @@ This is an **AI‑powered page generation platform** that lets users describe an
   - `/user/login` – UserLoginPage
   - `/user/register` – UserRegisterPage
   - `/admin/userManage` – UserManagePage
+  - `/admin/appManage` – AppManagePage
   - `/app/chat/:id` – AppChatPage (AI chat interface for app generation)
-- Additional routes (commented out): `/admin/appManage`, `/admin/chatManage`, `/app/edit/:id`
+  - `/app/edit/:id` – AppEditPage (edit app metadata and configuration)
+- Additional routes (commented out): `/admin/chatManage`
 - `src/layouts/BasicLayout.tsx` provides a common frame with `GlobalHeader` and `GlobalFooter`
 - Route‑level permission checks are performed by the layout via `useAccess()`
 
@@ -103,7 +105,7 @@ src/
 1. **TypeScript:** All new code must be typed. Use the generated `API.*` types for backend data structures.
 2. **API Calls:** Always use the generated controller functions (e.g., `addApp`, `listMyAppVoByPage`) from `src/api/`. Never write raw Axios calls.
 3. **State:** Global state belongs in Zustand stores; local UI state uses `useState`.
-4. **Styling:** Ant Design components are the primary UI building blocks. Custom styles are placed in `.module.css` files co‑located with components.
+4. **Styling:** Ant Design components are the primary UI building blocks. Custom styles are placed in `.module.css` files co‑located with components. Use `styles["className"]` format for CSS module imports (e.g., `className={styles["appChatPage"]}`).
 5. **Environment Variables:** Prefix with `VITE_` to be exposed to the frontend. Access via `import.meta.env`.
 6. **OpenAPI Updates:** After backend API changes, run `pnpm openapi2ts` to regenerate types and clients.
 7. **Markdown Rendering:** For AI-generated content or chat interfaces, use `markdown-it` with `highlight.js` for syntax-highlighted code blocks.
