@@ -1,15 +1,19 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Input, Tag, message, Avatar, Spin, Space } from 'antd'
-import { SendOutlined, CloudUploadOutlined, DownloadOutlined, InfoCircleOutlined, ExportOutlined } from '@ant-design/icons'
+import { Button, Input, Tag, message, Avatar, Spin, Space, Alert, Tooltip } from 'antd'
+import { SendOutlined, CloudUploadOutlined, DownloadOutlined, InfoCircleOutlined, ExportOutlined, EditOutlined } from '@ant-design/icons'
 import { useLoginUserStore } from '@/stores/loginUser'
-import { getAppVoById, deployApp as deployAppApi } from '@/api/appController'
+import { getAppVoById, deployApp as deployAppApi, deleteApp } from '@/api/appController'
 import { listAppChatHistory } from '@/api/chatHistoryController'
-import { formatCodeGenType } from '@/utils/codeGenTypes'
+import { CodeGenTypeEnum, formatCodeGenType } from '@/utils/codeGenTypes'
 import { getStaticPreviewUrl } from '@/config/env'
+import AppDetailModal from '@/components/AppDetailModal'
 import request from '@/request'
 import styles from './index.module.css'
 import clsx from 'clsx'
+import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
+import aiAvatar from '@/assets/aiAvatar.png'
+import MarkdownRenderer from '@/components/MarkdownRenderer'
 
 const { TextArea } = Input
 
@@ -23,17 +27,66 @@ const AppChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const loginUserStore = useLoginUserStore()
-  const [appInfo, setAppInfo] = useState<any>(null)
+
+  // 应用信息
+  const [appInfo, setAppInfo] = useState<API.AppVO | null>(null)
+  const [appId] = useState<string>(id || '')
+
+  // 对话相关
   const [messages, setMessages] = useState<Message[]>([])
   const [userInput, setUserInput] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState('')
-  const [deploying, setDeploying] = useState(false)
-  const [downloading, setDownloading] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
+  // 对话历史相关
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [hasMoreHistory, setHasMoreHistory] = useState(false)
+  const [lastCreateTime, setLastCreateTime] = useState<string>()
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+
+  // 预览相关
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewReady, setPreviewReady] = useState(false)
+
+  // 部署相关
+  const [deploying, setDeploying] = useState(false)
+  const [deployModalVisible, setDeployModalVisible] = useState(false)
+  const [deployUrl, setDeployUrl] = useState('')
+
+  // 下载相关
+  const [downloading, setDownloading] = useState(false)
+
+  // 可视化编辑相关
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [selectedElementInfo, setSelectedElementInfo] = useState<ElementInfo | null>(null)
+  const visualEditorRef = useRef<VisualEditor | null>(null)
+
+  // 应用详情相关
+  const [appDetailVisible, setAppDetailVisible] = useState(false)
+
+  // 权限相关
   const isOwner = appInfo?.userId === loginUserStore.loginUser.id
   const isAdmin = loginUserStore.loginUser.userRole === 'admin'
+
+  // 初始化 visualEditor
+  useEffect(() => {
+    visualEditorRef.current = new VisualEditor({
+      onElementSelected: (elementInfo: ElementInfo) => {
+        setSelectedElementInfo(elementInfo)
+      },
+    })
+
+    // 监听 iframe 消息
+    const handleMessage = (event: MessageEvent) => {
+      visualEditorRef.current?.handleIframeMessage(event)
+    }
+
+    window.addEventListener('message', handleMessage)
+
+    return () => {
+      window.removeEventListener('message', handleMessage)
+    }
+  }, [])
 
   // 加载应用信息和聊天历史
   useEffect(() => {
@@ -47,7 +100,7 @@ const AppChatPage: React.FC = () => {
 
   const fetchAppInfo = async () => {
     try {
-      const res = await getAppVoById({ id: parseInt(id!) })
+      const res = await getAppVoById({ id: id })
       if (res.data.code === 0 && res.data.data) {
         const app = res.data.data
         setAppInfo(app)
@@ -72,52 +125,140 @@ const AppChatPage: React.FC = () => {
     }
   }
 
-  const loadChatHistory = async (appId: number) => {
+  const loadChatHistory = async (appId: number, isLoadMore: boolean) => {
+    if (loadingHistory) return
+
+    setLoadingHistory(true)
     try {
-      const res = await listAppChatHistory({
+      const params: API.listAppChatHistoryParams = {
         appId,
         pageSize: 10,
-      })
+      }
+      // 如果是加载更多，传递最后一条消息的创建时间作为游标
+      if (isLoadMore && lastCreateTime) {
+        params.lastCreateTime = lastCreateTime
+      }
+
+      const res = await listAppChatHistory(params)
       if (res.data.code === 0 && res.data.data) {
         const chatHistories = res.data.data.records || []
-        const historyMessages: Message[] = chatHistories
-          .map((chat: any) => ({
-            type: chat.messageType === 'user' ? 'user' : 'ai',
-            content: chat.message || '',
-          }))
-          .reverse()
-        setMessages(historyMessages)
+        if (chatHistories.length > 0) {
+          const historyMessages: Message[] = chatHistories
+            .map((chat: any) => ({
+              type: (chat.messageType === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+              content: chat.message || '',
+              createTime: chat.createTime,
+            }))
+            .reverse()
+
+          if (isLoadMore) {
+            setMessages((prev) => [...historyMessages, ...prev])
+          } else {
+            setMessages(historyMessages)
+          }
+
+          // 更新游标
+          setLastCreateTime(chatHistories[chatHistories.length - 1]?.createTime)
+          setHasMoreHistory(chatHistories.length === 10)
+        } else {
+          setHasMoreHistory(false)
+        }
+        setHistoryLoaded(true)
       }
     } catch (error) {
       console.error('加载对话历史失败：', error)
       message.error('加载对话历史失败')
+    } finally {
+      setLoadingHistory(false)
     }
   }
 
+  const loadMoreHistory = async () => {
+    if (appId) {
+      await loadChatHistory(parseInt(appId), true)
+    }
+  }
+
+    const toggleEditMode = () => {
+    // 检查 iframe 是否已经加载
+    const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
+    if (!iframe) {
+      message.warning('请等待页面加载完成')
+      return
+    }
+    // 确保 visualEditor 已初始化
+    if (!previewReady) {
+      message.warning('请等待页面加载完成')
+      return
+    }
+    const newEditMode = visualEditorRef.current?.toggleEditMode() ?? false
+    setIsEditMode(newEditMode)
+  }
+
+  const clearSelectedElement = () => {
+    setSelectedElementInfo(null)
+    visualEditorRef.current?.clearSelection()
+  }
+
+  const getInputPlaceholder = () => {
+    if (selectedElementInfo) {
+      return `正在编辑 ${selectedElementInfo.tagName.toLowerCase()} 元素，描述您想要的修改...`
+    }
+    return '请描述你想生成的网站，越详细效果越好哦'
+  }
+
   const updatePreview = (appId: string, codeGenType?: string) => {
-    const newPreviewUrl = getStaticPreviewUrl(codeGenType || 'html', appId)
+    const newPreviewUrl = getStaticPreviewUrl(codeGenType || CodeGenTypeEnum.HTML, appId)
     setPreviewUrl(newPreviewUrl)
+    setPreviewReady(true)
   }
 
   const sendInitialMessage = async (prompt: string) => {
-    const newMessages = [...messages, { type: 'user', content: prompt }]
+    const newMessages = [...messages, { type: 'user' as const, content: prompt }]
     setMessages(newMessages)
     await generateCode(prompt, newMessages.length)
   }
 
+
   const sendMessage = async () => {
     if (!userInput.trim() || isGenerating) return
-    const content = userInput.trim()
+
+    let messageText = userInput.trim()
+    // 如果有选中的元素，将元素信息添加到提示词中
+    if (selectedElementInfo) {
+      let elementContext = '\n\n选中元素信息：'
+      if (selectedElementInfo.pagePath) {
+        elementContext += `\n- 页面路径: ${selectedElementInfo.pagePath}`
+      }
+      elementContext += `\n- 标签: ${selectedElementInfo.tagName.toLowerCase()}\n- 选择器: ${selectedElementInfo.selector}`
+      if (selectedElementInfo.textContent) {
+        elementContext += `\n- 当前内容: ${selectedElementInfo.textContent.substring(0, 100)}`
+      }
+      messageText += elementContext
+    }
+
     setUserInput('')
-    const newMessages = [...messages, { type: 'user', content }]
+    const newMessages = [...messages, { type: 'user' as const, content: messageText }]
     setMessages(newMessages)
-    await generateCode(content, newMessages.length)
+
+    // 发送消息后，清除选中元素并退出编辑模式
+    if (selectedElementInfo) {
+      clearSelectedElement()
+      if (isEditMode) {
+        toggleEditMode()
+      }
+    }
+
+    await generateCode(messageText, newMessages.length)
   }
 
   const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     setIsGenerating(true)
     // 添加AI消息占位符
-    setMessages(prev => [...prev, { type: 'ai', content: '', loading: true }])
+    setMessages((prev) => [...prev, { type: 'ai', content: '', loading: true }])
+
+    let eventSource: EventSource | null = null
+    let streamCompleted = false
 
     try {
       const baseURL = request.defaults.baseURL || ''
@@ -126,42 +267,87 @@ const AppChatPage: React.FC = () => {
         message: userMessage,
       })
       const url = `${baseURL}/app/chat/gen/code?${params}`
-      const eventSource = new EventSource(url, { withCredentials: true })
+      eventSource = new EventSource(url, { withCredentials: true })
+
       let fullContent = ''
 
       eventSource.onmessage = (event) => {
+        if (streamCompleted) return
+
         try {
           const parsed = JSON.parse(event.data)
           const content = parsed.d
           if (content !== undefined && content !== null) {
             fullContent += content
-            setMessages(prev => prev.map((msg, idx) =>
-              idx === aiMessageIndex ? { ...msg, content: fullContent, loading: false } : msg
-            ))
+            setMessages((prev) =>
+              prev.map((msg, idx) =>
+                idx === aiMessageIndex ? { ...msg, content: fullContent, loading: false } : msg
+              )
+            )
             scrollToBottom()
           }
         } catch (error) {
           console.error('解析消息失败:', error)
           handleError(error, aiMessageIndex)
-          eventSource.close()
+          eventSource?.close()
         }
       }
 
       eventSource.addEventListener('done', () => {
+        if (streamCompleted) return
+
+        streamCompleted = true
         setIsGenerating(false)
-        eventSource.close()
-        setTimeout(() => {
-          fetchAppInfo()
+        eventSource?.close()
+
+        setTimeout(async () => {
+          await fetchAppInfo()
           if (appInfo) {
             updatePreview(appInfo.id, appInfo.codeGenType)
           }
         }, 1000)
       })
 
-      eventSource.onerror = (error) => {
-        console.error('SSE连接错误:', error)
-        handleError(error, aiMessageIndex)
-        eventSource.close()
+      eventSource.addEventListener('business-error', (event: MessageEvent) => {
+        if (streamCompleted) return
+
+        try {
+          const errorData = JSON.parse(event.data)
+          console.error('SSE业务错误事件:', errorData)
+
+          const errorMessage = errorData.message || '生成过程中出现错误'
+          setMessages((prev) =>
+            prev.map((msg, idx) =>
+              idx === aiMessageIndex ? { ...msg, content: `❌ ${errorMessage}`, loading: false } : msg
+            )
+          )
+          message.error(errorMessage)
+
+          streamCompleted = true
+          setIsGenerating(false)
+          eventSource?.close()
+        } catch (parseError) {
+          console.error('解析错误事件失败:', parseError, '原始数据:', event.data)
+          handleError(new Error('服务器返回错误'), aiMessageIndex)
+        }
+      })
+
+      eventSource.onerror = () => {
+        if (streamCompleted || !isGenerating) return
+        if (eventSource?.readyState === EventSource.CONNECTING) {
+          streamCompleted = true
+          setIsGenerating(false)
+          eventSource?.close()
+
+          setTimeout(async () => {
+            await fetchAppInfo()
+            if (appInfo) {
+              updatePreview(appInfo.id, appInfo.codeGenType)
+            }
+          }, 1000)
+        } else {
+          handleError(new Error('SSE连接错误'), aiMessageIndex)
+        }
       }
     } catch (error) {
       console.error('创建 EventSource 失败：', error)
@@ -171,12 +357,17 @@ const AppChatPage: React.FC = () => {
 
   const handleError = (error: unknown, aiMessageIndex: number) => {
     console.error('生成代码失败：', error)
-    setMessages(prev => prev.map((msg, idx) =>
-      idx === aiMessageIndex ? { ...msg, content: '抱歉，生成过程中出现了错误，请重试。', loading: false } : msg
-    ))
+    setMessages((prev) =>
+      prev.map((msg, idx) =>
+        idx === aiMessageIndex
+          ? { ...msg, content: '抱歉，生成过程中出现了错误，请重试。', loading: false }
+          : msg
+      )
+    )
     message.error('生成失败，请重试')
     setIsGenerating(false)
   }
+
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -248,10 +439,44 @@ const AppChatPage: React.FC = () => {
     }
   }
 
-  const msgItemClass = (type:string)=>clsx(styles['message-item'], {
-    [styles[`${type}-message`]]: true,
-  })
+  const openDeployedSite = () => {
+    if (deployUrl) {
+      window.open(deployUrl, '_blank')
+    }
+  }
 
+  const onIframeLoad = () => {
+    setPreviewReady(true)
+    const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
+    if (iframe && visualEditorRef.current) {
+      visualEditorRef.current.init(iframe)
+      visualEditorRef.current.onIframeLoad()
+    }
+  }
+
+    const editApp = () => {
+    if (appInfo?.id) {
+      navigate(`/app/edit/${appInfo.id}`)
+    }
+  }
+
+  const deleteAppHandler = async () => {
+    if (!appInfo?.id) return
+
+    try {
+      const res = await deleteApp({ id: appInfo.id })
+      if (res.data.code === 0) {
+        message.success('删除成功')
+        setAppDetailVisible(false)
+        navigate('/')
+      } else {
+        message.error('删除失败：' + res.data.message)
+      }
+    } catch (error) {
+      console.error('删除失败：', error)
+      message.error('删除失败')
+    }
+  }
 
   return (
     <div className={styles["appChatPage"]}>
@@ -266,7 +491,7 @@ const AppChatPage: React.FC = () => {
           )}
         </div>
         <div className={styles["header-right"]}>
-          <Button type="default" icon={<InfoCircleOutlined />}>
+          <Button type="default" icon={<InfoCircleOutlined />} onClick={() => setAppDetailVisible(true)}>
             应用详情
           </Button>
           <Button
@@ -296,28 +521,35 @@ const AppChatPage: React.FC = () => {
         <div className={styles["chat-section"]}>
           {/* 消息区域 */}
           <div className={styles["messages-container"]} ref={messagesContainerRef}>
+            {hasMoreHistory && (
+              <div className="load-more-container">
+                <Button type="link" onClick={loadMoreHistory} loading={loadingHistory} size="small">
+                  加载更多历史消息
+                </Button>
+              </div>
+            )}
             {messages.map((msg, idx) => (
-              <div key={idx} className={msgItemClass(msg.type)}>
+              <div key={idx} className="message-item">
                 {msg.type === 'user' ? (
-                  <div className={styles["user-message"]}>
-                    <div className={styles["message-content"]}>{msg.content}</div>
-                    <div className={styles["message-avatar"]}>
+                  <div className="user-message">
+                    <div className="message-content">{msg.content}</div>
+                    <div className="message-avatar">
                       <Avatar src={loginUserStore.loginUser.userAvatar} />
                     </div>
                   </div>
                 ) : (
-                  <div className={styles["ai-message"]}>
-                    <div className={styles["message-avatar"]}>
-                      <Avatar src="/src/assets/aiAvatar.png" />
+                  <div className="ai-message">
+                    <div className="message-avatar">
+                      <Avatar src={aiAvatar} />
                     </div>
-                    <div className={styles["message-content"]}>
+                    <div className="message-content">
                       {msg.loading ? (
-                        <div className={styles["loading-indicator"]}>
+                        <div className="loading-indicator">
                           <Spin size="small" />
                           <span>AI 正在思考...</span>
                         </div>
                       ) : (
-                        <div>{msg.content}</div>
+                        <MarkdownRenderer content={msg.content} />
                       )}
                     </div>
                   </div>
@@ -326,23 +558,78 @@ const AppChatPage: React.FC = () => {
             ))}
           </div>
 
+                    {/* 选中元素信息展示 */}
+          {selectedElementInfo && (
+            <Alert
+              className="selected-element-alert"
+              type="info"
+              closable
+              onClose={clearSelectedElement}
+              message={
+                <div className="selected-element-info">
+                  <div className="element-header">
+                    <span className="element-tag">
+                      选中元素：{selectedElementInfo.tagName.toLowerCase()}
+                    </span>
+                    {selectedElementInfo.id && (
+                      <span className="element-id">#{selectedElementInfo.id}</span>
+                    )}
+                    {selectedElementInfo.className && (
+                      <span className="element-class">
+                        .{selectedElementInfo.className.split(' ').join('.')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="element-details">
+                    {selectedElementInfo.textContent && (
+                      <div className="element-item">
+                        内容: {selectedElementInfo.textContent.substring(0, 50)}
+                        {selectedElementInfo.textContent.length > 50 ? '...' : ''}
+                      </div>
+                    )}
+                    {selectedElementInfo.pagePath && (
+                      <div className="element-item">页面路径: {selectedElementInfo.pagePath}</div>
+                    )}
+                    <div className="element-item">
+                      选择器:
+                      <code className="element-selector-code">{selectedElementInfo.selector}</code>
+                    </div>
+                  </div>
+                </div>
+              }
+            />
+          )}
+
           {/* 用户消息输入框 */}
           <div className={styles["input-container"]}>
             <div className={styles["input-wrapper"]}>
-              <TextArea
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder="请描述你想生成的网站，越详细效果越好哦"
-                rows={4}
-                maxLength={1000}
-                disabled={isGenerating || !isOwner}
-                onPressEnter={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
-                }}
-              />
+              {!isOwner ? (
+                <Tooltip title="无法在别人的作品下对话哦~" placement="top">
+                  <TextArea
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder={getInputPlaceholder()}
+                    rows={4}
+                    maxLength={1000}
+                    disabled={isGenerating || !isOwner}
+                  />
+                </Tooltip>
+              ) : (
+                <TextArea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder={getInputPlaceholder()}
+                  rows={4}
+                  maxLength={1000}
+                  disabled={isGenerating}
+                  onPressEnter={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      sendMessage()
+                    }
+                  }}
+                />
+              )}
               <div className={styles["input-actions"]}>
                 <Button
                   type="primary"
@@ -361,6 +648,18 @@ const AppChatPage: React.FC = () => {
           <div className={styles["preview-header"]}>
             <h3>生成后的网页展示</h3>
             <div className={styles["preview-actions"]}>
+              {isOwner && previewUrl && (
+                <Button
+                  type="link"
+                  danger={isEditMode}
+                  onClick={toggleEditMode}
+                  className={isEditMode ? 'edit-mode-active' : ''}
+                  style={{ padding: 0, height: 'auto', marginRight: 12 }}
+                >
+                  <EditOutlined />
+                  {isEditMode ? '退出编辑' : '编辑模式'}
+                </Button>
+              )}
               <Button type="link" icon={<ExportOutlined />} onClick={openInNewTab}>
                 新窗口打开
               </Button>
@@ -382,12 +681,30 @@ const AppChatPage: React.FC = () => {
                 src={previewUrl}
                 className={styles["preview-iframe"]}
                 frameBorder="0"
+                onLoad={onIframeLoad}
                 title="预览"
               />
             )}
           </div>
         </div>
       </div>
+            {/* 应用详情弹窗 */}
+      <AppDetailModal
+        open={appDetailVisible}
+        app={appInfo ?? undefined}
+        showActions={isOwner || isAdmin}
+        onOpenChange={setAppDetailVisible}
+        onEdit={editApp}
+        onDelete={deleteAppHandler}
+      />
+
+      {/* 部署成功弹窗 */}
+      <DeploySuccessModal
+        open={deployModalVisible}
+        deployUrl={deployUrl}
+        onOpenChange={setDeployModalVisible}
+        onOpenSite={openDeployedSite}
+      />
     </div>
   )
 }

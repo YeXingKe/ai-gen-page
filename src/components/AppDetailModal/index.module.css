@@ -1,0 +1,37 @@
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+
+.app-detail-content {
+  padding: 8px 0;
+}
+
+.app-basic-info {
+  margin-bottom: 24px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.info-label {
+  width: 80px;
+  color: #666;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.app-actions {
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
