@@ -10,10 +10,6 @@ declare namespace API {
     priority?: number
   }
 
-  type AppDeployRequest = {
-    appId?: number
-  }
-
   type AppQueryRequest = {
     pageNum?: number
     pageSize?: number
@@ -59,6 +55,10 @@ declare namespace API {
     code?: number
     data?: boolean
     message?: string
+  }
+
+  type AppDeployRequest = {
+    appId?: number
   }
 
   type BaseResponseLoginUserVO = {

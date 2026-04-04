@@ -10,10 +10,10 @@ import { getStaticPreviewUrl } from '@/config/env'
 import AppDetailModal from '@/components/AppDetailModal'
 import request from '@/request'
 import styles from './index.module.css'
-import clsx from 'clsx'
 import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
 import aiAvatar from '@/assets/aiAvatar.png'
 import MarkdownRenderer from '@/components/MarkdownRenderer'
+import DeploySuccessModal from '@/components/DeploySuccessModal'
 
 const { TextArea } = Input
 
@@ -105,13 +105,13 @@ const AppChatPage: React.FC = () => {
         const app = res.data.data
         setAppInfo(app)
         // 加载聊天历史
-        await loadChatHistory(app.id)
+        await loadChatHistory(app.id,false)
         // 如果有至少2条对话记录，展示对应的网站
         if (messages.length >= 2) {
           updatePreview(app.id, app.codeGenType)
         }
         // 如果是自己的应用且没有对话历史，自动发送初始提示词
-        if (app.initPrompt && isOwner && messages.length === 0) {
+        if (app.initPrompt && isOwner && messages.length === 0 && historyLoaded) {
           await sendInitialMessage(app.initPrompt)
         }
       } else {
@@ -522,29 +522,29 @@ const AppChatPage: React.FC = () => {
           {/* 消息区域 */}
           <div className={styles["messages-container"]} ref={messagesContainerRef}>
             {hasMoreHistory && (
-              <div className="load-more-container">
+              <div className={styles["load-more-container"]}>
                 <Button type="link" onClick={loadMoreHistory} loading={loadingHistory} size="small">
                   加载更多历史消息
                 </Button>
               </div>
             )}
             {messages.map((msg, idx) => (
-              <div key={idx} className="message-item">
+              <div key={idx} className={styles["message-item"]}>
                 {msg.type === 'user' ? (
-                  <div className="user-message">
-                    <div className="message-content">{msg.content}</div>
-                    <div className="message-avatar">
+                  <div className={styles["user-message"]}>
+                    <div className={styles["message-content"]}>{msg.content}</div>
+                    <div className={styles["message-avatar"]}>
                       <Avatar src={loginUserStore.loginUser.userAvatar} />
                     </div>
                   </div>
                 ) : (
-                  <div className="ai-message">
-                    <div className="message-avatar">
+                  <div className={styles["ai-message"]}>
+                    <div className={styles["message-avatar"]}>
                       <Avatar src={aiAvatar} />
                     </div>
-                    <div className="message-content">
+                    <div className={styles["message-content"]}>
                       {msg.loading ? (
-                        <div className="loading-indicator">
+                        <div className={styles["loading-indicator"]}>
                           <Spin size="small" />
                           <span>AI 正在思考...</span>
                         </div>
@@ -561,38 +561,38 @@ const AppChatPage: React.FC = () => {
                     {/* 选中元素信息展示 */}
           {selectedElementInfo && (
             <Alert
-              className="selected-element-alert"
+              className={styles["selected-element-alert"]}
               type="info"
               closable
               onClose={clearSelectedElement}
               message={
-                <div className="selected-element-info">
-                  <div className="element-header">
-                    <span className="element-tag">
+                <div className={styles["selected-element-info"]}>
+                  <div className={styles["element-header"]}>
+                    <span className={styles["element-tag"]}>
                       选中元素：{selectedElementInfo.tagName.toLowerCase()}
                     </span>
                     {selectedElementInfo.id && (
-                      <span className="element-id">#{selectedElementInfo.id}</span>
+                      <span className={styles["element-id"]}>#{selectedElementInfo.id}</span>
                     )}
                     {selectedElementInfo.className && (
-                      <span className="element-class">
+                      <span className={styles["element-class"]}>
                         .{selectedElementInfo.className.split(' ').join('.')}
                       </span>
                     )}
                   </div>
-                  <div className="element-details">
+                  <div className={styles["element-details"]}>
                     {selectedElementInfo.textContent && (
-                      <div className="element-item">
+                      <div className={styles["element-item"]}>
                         内容: {selectedElementInfo.textContent.substring(0, 50)}
                         {selectedElementInfo.textContent.length > 50 ? '...' : ''}
                       </div>
                     )}
                     {selectedElementInfo.pagePath && (
-                      <div className="element-item">页面路径: {selectedElementInfo.pagePath}</div>
+                      <div className={styles["element-item"]}>页面路径: {selectedElementInfo.pagePath}</div>
                     )}
-                    <div className="element-item">
+                    <div className={styles["element-item"]}>
                       选择器:
-                      <code className="element-selector-code">{selectedElementInfo.selector}</code>
+                      <code className={styles["element-selector-code"]}>{selectedElementInfo.selector}</code>
                     </div>
                   </div>
                 </div>
@@ -653,7 +653,7 @@ const AppChatPage: React.FC = () => {
                   type="link"
                   danger={isEditMode}
                   onClick={toggleEditMode}
-                  className={isEditMode ? 'edit-mode-active' : ''}
+                  className={isEditMode ? styles["edit-mode-active"] : ''}
                   style={{ padding: 0, height: 'auto', marginRight: 12 }}
                 >
                   <EditOutlined />

@@ -4,7 +4,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import UserInfo from './UserInfo'
 import { formatTime } from '@/utils/time'
 import { formatCodeGenType } from '@/utils/codeGenTypes'
-import './AppDetailModal.css'
+import './index.module.css'
 
 interface AppDetailModalProps {
   open: boolean
