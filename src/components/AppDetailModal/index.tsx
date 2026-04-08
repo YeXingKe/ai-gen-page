@@ -4,7 +4,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import UserInfo from './UserInfo'
 import { formatTime } from '@/utils/time'
 import { formatCodeGenType } from '@/utils/codeGenTypes'
-import './index.module.css'
+import styles from './index.module.css'
 
 interface AppDetailModalProps {
   open: boolean
@@ -31,18 +31,18 @@ const AppDetailModal: React.FC<AppDetailModalProps> = ({
       footer={null}
       width={500}
     >
-      <div className="app-detail-content">
-        <div className="app-basic-info">
-          <div className="info-item">
-            <span className="info-label">创建者：</span>
+      <div className={styles['app-detail-content']}>
+        <div className={styles['app-basic-info']}>
+          <div className={styles['info-item']}>
+            <span className={styles['info-label']}>创建者：</span>
             <UserInfo user={app?.user} size="small" />
           </div>
-          <div className="info-item">
-            <span className="info-label">创建时间：</span>
+          <div className={styles['info-item']}>
+            <span className={styles['info-label']}>创建时间：</span>
             <span>{formatTime(app?.createTime)}</span>
           </div>
-          <div className="info-item">
-            <span className="info-label">生成类型：</span>
+          <div className={styles['info-item']}>
+            <span className={styles['info-label']}>生成类型：</span>
             {app?.codeGenType ? (
               <Tag color="blue">{formatCodeGenType(app.codeGenType)}</Tag>
             ) : (
@@ -52,7 +52,7 @@ const AppDetailModal: React.FC<AppDetailModalProps> = ({
         </div>
 
         {showActions && (
-          <div className="app-actions">
+          <div className={styles['app-actions']}>
             <Space>
               <Button type="primary" icon={<EditOutlined />} onClick={onEdit}>
                 修改

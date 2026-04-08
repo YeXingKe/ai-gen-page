@@ -13,6 +13,7 @@ interface LoginUserStore {
 export const useLoginUserStore = create<LoginUserStore>((set) => ({
   loginUser: {
     userName: '未登录',
+    userAvatar: '',
   },
 
   // 获取登录用户信息

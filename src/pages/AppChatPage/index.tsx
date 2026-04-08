@@ -1,7 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Input, Tag, message, Avatar, Spin, Space, Alert, Tooltip } from 'antd'
-import { SendOutlined, CloudUploadOutlined, DownloadOutlined, InfoCircleOutlined, ExportOutlined, EditOutlined } from '@ant-design/icons'
+import {
+  SendOutlined,
+  CloudUploadOutlined,
+  DownloadOutlined,
+  InfoCircleOutlined,
+  ExportOutlined,
+  EditOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { getAppVoById, deployApp as deployAppApi, deleteApp } from '@/api/appController'
 import { listAppChatHistory } from '@/api/chatHistoryController'
@@ -105,7 +113,7 @@ const AppChatPage: React.FC = () => {
         const app = res.data.data
         setAppInfo(app)
         // 加载聊天历史
-        await loadChatHistory(app.id,false)
+        await loadChatHistory(app.id, false)
         // 如果有至少2条对话记录，展示对应的网站
         if (messages.length >= 2) {
           updatePreview(app.id, app.codeGenType)
@@ -179,7 +187,7 @@ const AppChatPage: React.FC = () => {
     }
   }
 
-    const toggleEditMode = () => {
+  const toggleEditMode = () => {
     // 检查 iframe 是否已经加载
     const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
     if (!iframe) {
@@ -218,7 +226,6 @@ const AppChatPage: React.FC = () => {
     setMessages(newMessages)
     await generateCode(prompt, newMessages.length)
   }
-
 
   const sendMessage = async () => {
     if (!userInput.trim() || isGenerating) return
@@ -281,8 +288,8 @@ const AppChatPage: React.FC = () => {
             fullContent += content
             setMessages((prev) =>
               prev.map((msg, idx) =>
-                idx === aiMessageIndex ? { ...msg, content: fullContent, loading: false } : msg
-              )
+                idx === aiMessageIndex ? { ...msg, content: fullContent, loading: false } : msg,
+              ),
             )
             scrollToBottom()
           }
@@ -318,8 +325,10 @@ const AppChatPage: React.FC = () => {
           const errorMessage = errorData.message || '生成过程中出现错误'
           setMessages((prev) =>
             prev.map((msg, idx) =>
-              idx === aiMessageIndex ? { ...msg, content: `❌ ${errorMessage}`, loading: false } : msg
-            )
+              idx === aiMessageIndex
+                ? { ...msg, content: `❌ ${errorMessage}`, loading: false }
+                : msg,
+            ),
           )
           message.error(errorMessage)
 
@@ -361,13 +370,12 @@ const AppChatPage: React.FC = () => {
       prev.map((msg, idx) =>
         idx === aiMessageIndex
           ? { ...msg, content: '抱歉，生成过程中出现了错误，请重试。', loading: false }
-          : msg
-      )
+          : msg,
+      ),
     )
     message.error('生成失败，请重试')
     setIsGenerating(false)
   }
-
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -454,7 +462,7 @@ const AppChatPage: React.FC = () => {
     }
   }
 
-    const editApp = () => {
+  const editApp = () => {
     if (appInfo?.id) {
       navigate(`/app/edit/${appInfo.id}`)
     }
@@ -479,19 +487,23 @@ const AppChatPage: React.FC = () => {
   }
 
   return (
-    <div className={styles["appChatPage"]}>
+    <div className={styles['appChatPage']}>
       {/* 顶部栏 */}
-      <div className={styles["header-bar"]}>
-        <div className={styles["header-left"]}>
-          <h1 className={styles["app-name"]}>{appInfo?.appName || '网站生成器'}</h1>
+      <div className={styles['header-bar']}>
+        <div className={styles['header-left']}>
+          <h1 className={styles['app-name']}>{appInfo?.appName || '网站生成器'}</h1>
           {appInfo?.codeGenType && (
-            <Tag color="blue" className={styles["code-gen-type-tag"]}>
+            <Tag color="blue" className={styles['code-gen-type-tag']}>
               {formatCodeGenType(appInfo.codeGenType)}
             </Tag>
           )}
         </div>
-        <div className={styles["header-right"]}>
-          <Button type="default" icon={<InfoCircleOutlined />} onClick={() => setAppDetailVisible(true)}>
+        <div className={styles['header-right']}>
+          <Button
+            type="default"
+            icon={<InfoCircleOutlined />}
+            onClick={() => setAppDetailVisible(true)}
+          >
             应用详情
           </Button>
           <Button
@@ -516,40 +528,40 @@ const AppChatPage: React.FC = () => {
       </div>
 
       {/* 主要内容区域 */}
-      <div className={styles["main-content"]}>
+      <div className={styles['main-content']}>
         {/* 左侧对话区域 */}
-        <div className={styles["chat-section"]}>
+        <div className={styles['chat-section']}>
           {/* 消息区域 */}
-          <div className={styles["messages-container"]} ref={messagesContainerRef}>
+          <div className={styles['messages-container']} ref={messagesContainerRef}>
             {hasMoreHistory && (
-              <div className={styles["load-more-container"]}>
+              <div className={styles['load-more-container']}>
                 <Button type="link" onClick={loadMoreHistory} loading={loadingHistory} size="small">
                   加载更多历史消息
                 </Button>
               </div>
             )}
             {messages.map((msg, idx) => (
-              <div key={idx} className={styles["message-item"]}>
+              <div key={idx} className={styles['message-item']}>
                 {msg.type === 'user' ? (
-                  <div className={styles["user-message"]}>
-                    <div className={styles["message-content"]}>{msg.content}</div>
-                    <div className={styles["message-avatar"]}>
-                      <Avatar src={loginUserStore.loginUser.userAvatar} />
+                  <div className={styles['user-message']}>
+                    <div className={styles['message-content']}>{msg.content}</div>
+                    <div className={styles['message-avatar']}>
+                      {/* src={loginUserStore.loginUser.userAvatar} */}
+                      <Avatar icon={<UserOutlined />} />
                     </div>
                   </div>
                 ) : (
-                  <div className={styles["ai-message"]}>
-                    <div className={styles["message-avatar"]}>
+                  <div className={styles['ai-message']}>
+                    <div className={styles['message-avatar']}>
                       <Avatar src={aiAvatar} />
                     </div>
-                    <div className={styles["message-content"]}>
-                      {msg.loading ? (
-                        <div className={styles["loading-indicator"]}>
+                    <div className={styles['message-content']}>
+                      {msg.content && <MarkdownRenderer content={msg.content} />}
+                      {msg.loading && (
+                        <div className={styles['loading-indicator']}>
                           <Spin size="small" />
                           <span>AI 正在思考...</span>
                         </div>
-                      ) : (
-                        <MarkdownRenderer content={msg.content} />
                       )}
                     </div>
                   </div>
@@ -558,41 +570,45 @@ const AppChatPage: React.FC = () => {
             ))}
           </div>
 
-                    {/* 选中元素信息展示 */}
+          {/* 选中元素信息展示 */}
           {selectedElementInfo && (
             <Alert
-              className={styles["selected-element-alert"]}
+              className={styles['selected-element-alert']}
               type="info"
               closable
               onClose={clearSelectedElement}
               message={
-                <div className={styles["selected-element-info"]}>
-                  <div className={styles["element-header"]}>
-                    <span className={styles["element-tag"]}>
+                <div className={styles['selected-element-info']}>
+                  <div className={styles['element-header']}>
+                    <span className={styles['element-tag']}>
                       选中元素：{selectedElementInfo.tagName.toLowerCase()}
                     </span>
                     {selectedElementInfo.id && (
-                      <span className={styles["element-id"]}>#{selectedElementInfo.id}</span>
+                      <span className={styles['element-id']}>#{selectedElementInfo.id}</span>
                     )}
                     {selectedElementInfo.className && (
-                      <span className={styles["element-class"]}>
+                      <span className={styles['element-class']}>
                         .{selectedElementInfo.className.split(' ').join('.')}
                       </span>
                     )}
                   </div>
-                  <div className={styles["element-details"]}>
+                  <div className={styles['element-details']}>
                     {selectedElementInfo.textContent && (
-                      <div className={styles["element-item"]}>
+                      <div className={styles['element-item']}>
                         内容: {selectedElementInfo.textContent.substring(0, 50)}
                         {selectedElementInfo.textContent.length > 50 ? '...' : ''}
                       </div>
                     )}
                     {selectedElementInfo.pagePath && (
-                      <div className={styles["element-item"]}>页面路径: {selectedElementInfo.pagePath}</div>
+                      <div className={styles['element-item']}>
+                        页面路径: {selectedElementInfo.pagePath}
+                      </div>
                     )}
-                    <div className={styles["element-item"]}>
+                    <div className={styles['element-item']}>
                       选择器:
-                      <code className={styles["element-selector-code"]}>{selectedElementInfo.selector}</code>
+                      <code className={styles['element-selector-code']}>
+                        {selectedElementInfo.selector}
+                      </code>
                     </div>
                   </div>
                 </div>
@@ -601,8 +617,8 @@ const AppChatPage: React.FC = () => {
           )}
 
           {/* 用户消息输入框 */}
-          <div className={styles["input-container"]}>
-            <div className={styles["input-wrapper"]}>
+          <div className={styles['input-container']}>
+            <div className={styles['input-wrapper']}>
               {!isOwner ? (
                 <Tooltip title="无法在别人的作品下对话哦~" placement="top">
                   <TextArea
@@ -630,7 +646,7 @@ const AppChatPage: React.FC = () => {
                   }}
                 />
               )}
-              <div className={styles["input-actions"]}>
+              <div className={styles['input-actions']}>
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
@@ -644,16 +660,16 @@ const AppChatPage: React.FC = () => {
         </div>
 
         {/* 右侧网页展示区域 */}
-        <div className={styles["preview-section"]}>
-          <div className={styles["preview-header"]}>
+        <div className={styles['preview-section']}>
+          <div className={styles['preview-header']}>
             <h3>生成后的网页展示</h3>
-            <div className={styles["preview-actions"]}>
+            <div className={styles['preview-actions']}>
               {isOwner && previewUrl && (
                 <Button
                   type="link"
                   danger={isEditMode}
                   onClick={toggleEditMode}
-                  className={isEditMode ? styles["edit-mode-active"] : ''}
+                  className={isEditMode ? styles['edit-mode-active'] : ''}
                   style={{ padding: 0, height: 'auto', marginRight: 12 }}
                 >
                   <EditOutlined />
@@ -665,21 +681,21 @@ const AppChatPage: React.FC = () => {
               </Button>
             </div>
           </div>
-          <div className={styles["preview-content"]}>
+          <div className={styles['preview-content']}>
             {!previewUrl && !isGenerating ? (
-              <div className={styles["preview-placeholder"]}>
-                <div className={styles["placeholder-icon"]}>🌐</div>
+              <div className={styles['preview-placeholder']}>
+                <div className={styles['placeholder-icon']}>🌐</div>
                 <p>网站文件生成完成后将在这里展示</p>
               </div>
             ) : isGenerating ? (
-              <div className={styles["preview-loading"]}>
+              <div className={styles['preview-loading']}>
                 <Spin size="large" />
                 <p>正在生成网站...</p>
               </div>
             ) : (
               <iframe
                 src={previewUrl}
-                className={styles["preview-iframe"]}
+                className={styles['preview-iframe']}
                 frameBorder="0"
                 onLoad={onIframeLoad}
                 title="预览"
@@ -688,7 +704,7 @@ const AppChatPage: React.FC = () => {
           </div>
         </div>
       </div>
-            {/* 应用详情弹窗 */}
+      {/* 应用详情弹窗 */}
       <AppDetailModal
         open={appDetailVisible}
         app={appInfo ?? undefined}

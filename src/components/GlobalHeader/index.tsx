@@ -12,7 +12,7 @@ import {
 } from 'antd'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useRef, useLayoutEffect } from 'react'
-import { HomeOutlined, LogoutOutlined } from '@ant-design/icons'
+import { HomeOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { userLogout } from '@/api/userController'
 import styles from './index.module.css'
@@ -50,14 +50,14 @@ const GlobalHeader: React.FC = () => {
       key: '/admin/appManage',
       label: '应用管理',
     },
-    {
-      key: 'others',
-      label: (
-        <a href="https://www.codefather.cn" target="_blank" rel="noopener noreferrer">
-          编程导航
-        </a>
-      ),
-    },
+    // {
+    //   key: 'others',
+    //   label: (
+    //     <a href="" target="_blank" rel="noopener noreferrer">
+    //       其他
+    //     </a>
+    //   ),
+    // },
   ]
 
   // 过滤菜单项
@@ -139,7 +139,8 @@ const GlobalHeader: React.FC = () => {
                 }}
               >
                 <Space>
-                  <Avatar src={loginUserStore.loginUser.userAvatar} />
+                  <Avatar icon={<UserOutlined />} />
+                  {/* <Avatar src={loginUserStore.loginUser.userAvatar} /> */}
                   {loginUserStore.loginUser.userName ?? '无名'}
                 </Space>
               </Dropdown>
