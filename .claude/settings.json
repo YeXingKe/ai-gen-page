@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dev:h5)"
+      "Bash(pnpm dev:h5)",
+      "Read(//d/develop/github/official/yu-ai-code-mother/yu-ai-code-mother-frontend/src/pages/app/**)",
+      "Bash(pnpm type-check:*)"
     ]
   }
 }

@@ -9,8 +9,8 @@ export const DEPLOY_DOMAIN = import.meta.env.VITE_DEPLOY_DOMAIN || 'http://local
 // API 基础地址
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8123/api'
 
-// 静态资源地址
-export const STATIC_BASE_URL = `${API_BASE_URL}/static`
+// 静态资源地址（使用相对路径，通过 Vite 代理访问）
+export const STATIC_BASE_URL = '/api/static'
 
 // 获取部署应用的完整URL
 export const getDeployUrl = (deployKey: string) => {

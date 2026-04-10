@@ -50,11 +50,12 @@ const AppChatPage: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [hasMoreHistory, setHasMoreHistory] = useState(false)
   const [lastCreateTime, setLastCreateTime] = useState<string>()
-  const [historyLoaded, setHistoryLoaded] = useState(false)
 
   // 预览相关
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewReady, setPreviewReady] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0) // 用于强制重新挂载 iframe
+  const previewIframeRef = useRef<HTMLIFrameElement>(null)
 
   // 部署相关
   const [deploying, setDeploying] = useState(false)
@@ -112,14 +113,14 @@ const AppChatPage: React.FC = () => {
       if (res.data.code === 0 && res.data.data) {
         const app = res.data.data
         setAppInfo(app)
-        // 加载聊天历史
-        await loadChatHistory(app.id, false)
+        // 加载聊天历史并获取消息数量
+        const messageCount = await loadChatHistory(app.id!, false)
         // 如果有至少2条对话记录，展示对应的网站
-        if (messages.length >= 2) {
-          updatePreview(app.id, app.codeGenType)
+        if (messageCount >= 2) {
+          updatePreview(String(app.id!), app.codeGenType)
         }
         // 如果是自己的应用且没有对话历史，自动发送初始提示词
-        if (app.initPrompt && isOwner && messages.length === 0 && historyLoaded) {
+        if (app.initPrompt && isOwner && messageCount === 0) {
           await sendInitialMessage(app.initPrompt)
         }
       } else {
@@ -133,8 +134,8 @@ const AppChatPage: React.FC = () => {
     }
   }
 
-  const loadChatHistory = async (appId: number, isLoadMore: boolean) => {
-    if (loadingHistory) return
+  const loadChatHistory = async (appId: number, isLoadMore: boolean): Promise<number> => {
+    if (loadingHistory) return 0
 
     setLoadingHistory(true)
     try {
@@ -168,14 +169,19 @@ const AppChatPage: React.FC = () => {
           // 更新游标
           setLastCreateTime(chatHistories[chatHistories.length - 1]?.createTime)
           setHasMoreHistory(chatHistories.length === 10)
+
+          // 返回当前消息总数，用于判断是否需要更新预览
+          return isLoadMore ? messages.length + historyMessages.length : historyMessages.length
         } else {
           setHasMoreHistory(false)
+          return 0
         }
-        setHistoryLoaded(true)
       }
+      return 0
     } catch (error) {
       console.error('加载对话历史失败：', error)
       message.error('加载对话历史失败')
+      return 0
     } finally {
       setLoadingHistory(false)
     }
@@ -189,7 +195,7 @@ const AppChatPage: React.FC = () => {
 
   const toggleEditMode = () => {
     // 检查 iframe 是否已经加载
-    const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
+    const iframe = previewIframeRef.current
     if (!iframe) {
       message.warning('请等待页面加载完成')
       return
@@ -217,8 +223,11 @@ const AppChatPage: React.FC = () => {
 
   const updatePreview = (appId: string, codeGenType?: string) => {
     const newPreviewUrl = getStaticPreviewUrl(codeGenType || CodeGenTypeEnum.HTML, appId)
+    setPreviewReady(false) // 先重置为 false，等 iframe 加载完成后再设为 true
+    setIsEditMode(false) // 重置编辑模式状态
+    setSelectedElementInfo(null) // 清除选中的元素
     setPreviewUrl(newPreviewUrl)
-    setPreviewReady(true)
+    setPreviewKey((prev) => prev + 1) // 强制重新挂载 iframe
   }
 
   const sendInitialMessage = async (prompt: string) => {
@@ -454,11 +463,11 @@ const AppChatPage: React.FC = () => {
   }
 
   const onIframeLoad = () => {
-    setPreviewReady(true)
-    const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
+    const iframe = previewIframeRef.current
     if (iframe && visualEditorRef.current) {
       visualEditorRef.current.init(iframe)
       visualEditorRef.current.onIframeLoad()
+      setPreviewReady(true)
     }
   }
 
@@ -694,9 +703,10 @@ const AppChatPage: React.FC = () => {
               </div>
             ) : (
               <iframe
+                key={previewKey}
+                ref={previewIframeRef}
                 src={previewUrl}
                 className={styles['preview-iframe']}
-                frameBorder="0"
                 onLoad={onIframeLoad}
                 title="预览"
               />
