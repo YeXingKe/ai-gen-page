@@ -1,6 +1,7 @@
 /**
  * 可视化编辑器工具类
  * 负责管理iframe内的可视化编辑功能
+ * 脚本注入、事件监听、元素选择等功能
  */
 export interface ElementInfo {
   tagName: string

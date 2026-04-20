@@ -15,7 +15,7 @@ const UserRegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const validateCheckPassword = (_: any, value: string, callback: (error?: string) => void) => {
     const password = form.getFieldValue('userPassword')
     if (value && value !== password) {

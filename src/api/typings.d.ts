@@ -57,10 +57,6 @@ declare namespace API {
     message?: string
   }
 
-  type AppDeployRequest = {
-    appId?: number
-  }
-
   type BaseResponseLoginUserVO = {
     code?: number
     data?: LoginUserVO
